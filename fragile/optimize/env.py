@@ -20,7 +20,7 @@ class Function(Environment):
         self,
         function: Callable[[typing.Tensor], typing.Tensor],
         bounds: Bounds,
-        custom_domain_check: Callable[[typing.Tensor], typing.Tensor] = None,
+        custom_domain_check: Callable[[typing.Tensor, typing.Tensor, int], typing.Tensor] = None,
         actions_as_perturbations: bool = True,
     ):
         """
@@ -153,8 +153,8 @@ class Function(Environment):
 
         """
         new_points = actions + observs if self._actions_as_perturbations else actions
-        oobs = self.calculate_oobs(points=new_points)
         rewards = self.function(new_points).flatten()
+        oobs = self.calculate_oobs(points=new_points, rewards=rewards)
         data = {"states": new_points, "observs": new_points, "rewards": rewards, "oobs": oobs}
         return data
 
@@ -185,13 +185,14 @@ class Function(Environment):
         )
         return new_states
 
-    def calculate_oobs(self, points: typing.Tensor) -> typing.Tensor:
+    def calculate_oobs(self, points: typing.Tensor, rewards: typing.Tensor) -> typing.Tensor:
         """
         Determine if a given batch of vectors lie inside the function domain.
 
         Args:
             points: Array of batched vectors that will be checked to lie inside \
                     the :class:`Function` bounds.
+            rewards: Array containing the rewards of the current walkers.
 
         Returns:
             Array of booleans of length batch_size (points.shape[0]) that will \
@@ -202,7 +203,9 @@ class Function(Environment):
         oobs = tensor.logical_not(self.bounds.points_in_bounds(points)).flatten()
         if self.custom_domain_check is not None:
             points_in_bounds = tensor.logical_not(oobs)
-            oobs[points_in_bounds] = self.custom_domain_check(points[points_in_bounds])
+            oobs[points_in_bounds] = self.custom_domain_check(
+                points[points_in_bounds], rewards[points_in_bounds], len(rewards)
+            )
         return oobs
 
     def sample_bounds(self, batch_size: int) -> typing.Tensor:
@@ -387,7 +390,7 @@ class MinimizerWrapper(Function):
         )
         new_points, rewards = self.minimizer.minimize_batch(env_states.observs)
         # new_points, rewards = tensor(new_points), tensor(rewards)
-        oobs = self.calculate_oobs(new_points)
+        oobs = self.calculate_oobs(new_points, rewards)
         updated_states = self.states_from_data(
             states=new_points,
             observs=new_points,

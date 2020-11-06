@@ -4,7 +4,8 @@ from typing import Callable
 from numba import jit
 import numpy as np
 
-from fragile.backend import tensor
+from fragile.backend import random_state, tensor
+from fragile.core.states import StatesEnv
 from fragile.optimize.env import Bounds, Function
 
 """
@@ -199,11 +200,17 @@ class LennardJones(OptimBenchmark):
 
     def __init__(self, n_atoms: int = 10, dims=None, *args, **kwargs):
         self.n_atoms = n_atoms
-        dims = 3 * n_atoms
+        self.dims = 3 * n_atoms
         self.benchmark = [np.zeros(self.n_atoms * 3), self.minima.get(str(int(n_atoms)), 0)]
-        super(LennardJones, self).__init__(dims=dims, function=lennard_jones, *args, **kwargs)
+        super(LennardJones, self).__init__(dims=self.dims, function=lennard_jones, *args, **kwargs)
 
     @staticmethod
     def get_bounds(dims):
-        bounds = [(-1.5, 1.5) for _ in range(dims)]
+        bounds = [(-15, 15) for _ in range(dims)]
         return Bounds.from_tuples(bounds)
+
+    def reset(self, batch_size: int = 1, **kwargs) -> StatesEnv:
+        states = super(LennardJones, self).reset(batch_size=batch_size, **kwargs)
+        new_states = random_state.normal(0, scale=1.0, size=states.states.shape)
+        states.update(observs=new_states, states=tensor.copy(new_states))
+        return states

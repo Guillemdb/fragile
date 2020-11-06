@@ -109,13 +109,14 @@ def calculate_clone(virtual_rewards: typing.Tensor, oobs: typing.Tensor = None, 
 def fai_iteration(
     observs: typing.Tensor,
     rewards: typing.Tensor,
-    oobs: typing.Tensor,
+    oobs: typing.Tensor = None,
     dist_coef: float = 1.0,
     reward_coef: float = 1.0,
     eps=1e-8,
     other_reward: typing.Tensor = 1.0,
 ):
     """Perform a FAI iteration."""
+    oobs = oobs if oobs is not None else tensor.zeros(rewards.shape, dtype=dtype.bool)
     virtual_reward = calculate_virtual_reward(
         observs,
         rewards,

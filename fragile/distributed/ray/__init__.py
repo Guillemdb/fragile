@@ -3,7 +3,7 @@ import sys
 
 try:
     import ray
-except (ImportError, ModuleNotFoundError) as e:
+except ImportError as e:
     if sys.version_info <= (3, 7):
         raise e
     else:

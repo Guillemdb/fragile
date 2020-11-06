@@ -278,7 +278,6 @@ class Curve(StreamingPlot):
         mpl_opts, bokeh_opts = self.update_default_opts(
             default_mpl_opts, mpl_opts, default_bokeh_opts, bokeh_opts
         )
-
         super(Curve, self).__init__(
             stream=get_stream,
             plot=holoviews.Curve,
