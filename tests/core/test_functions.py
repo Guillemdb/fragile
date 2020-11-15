@@ -4,14 +4,15 @@ from hypothesis import given
 from hypothesis.extra.numpy import arrays
 from hypothesis.errors import HypothesisDeprecationWarning
 import hypothesis.strategies as st
-import numpy
-
-from fragile.backend import Backend, dtype, tensor
-from fragile.backend.functions.fractalai import (
+from judo import Backend, dtype, tensor
+from judo.functions.fractalai import (
     calculate_clone,
     calculate_virtual_reward,
     fai_iteration,
 )
+import numpy
+
+
 from fragile.core.utils import NUMPY_IGNORE_WARNINGS_PARAMS
 
 warnings.filterwarnings("ignore", category=HypothesisDeprecationWarning)

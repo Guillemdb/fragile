@@ -1,8 +1,8 @@
+import judo
+from judo import dtype, tensor
+import numpy
 import pytest
 
-import numpy
-
-from fragile.backend import dtype, tensor
 from fragile.distributed.export_swarm import ExportSwarm, ExportedWalkers, ParamServer
 
 from tests.core.test_swarm import create_cartpole_swarm, TestSwarm
@@ -80,7 +80,7 @@ class TestExportedSwarm:
 
     @pytest.mark.parametrize("export_swarm", swarm_params, indirect=True)
     def test_create_export_walkers(self, export_swarm):
-        indexes = tensor.arange(5)
+        indexes = judo.arange(5)
         walkers = export_swarm._create_export_walkers(indexes)
         assert isinstance(walkers, ExportedWalkers)
         assert len(walkers) == 5
@@ -167,7 +167,7 @@ class TestExportedSwarm:
         )
         assert export_swarm.walkers.states.cum_rewards[0] == 999.0
         assert export_swarm.walkers.env_states.states[0] == 999.0
-        assert (export_swarm.walkers.env_states.observs[0] == tensor.ones(4) * 999).all()
+        assert (export_swarm.walkers.env_states.observs[0] == judo.ones(4) * 999).all()
 
     @pytest.mark.parametrize("export_swarm", swarm_params, indirect=True)
     def test_run_exchange_step(self, export_swarm):

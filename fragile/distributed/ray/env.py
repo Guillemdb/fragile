@@ -1,17 +1,18 @@
 import asyncio
 from typing import Callable, Dict, List, Tuple
 
-from fragile.backend import tensor, typing
+import judo
+
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
-from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks
-from fragile.distributed.ray import ray
+from fragile.core.typing import StateDict, Tensor
+from fragile.distributed.ray import MAX_CALLS_ACTOR, N_GPUS_ACTOR, ray
 
 # The type hints of the base class are not supported by cloudpickle
 # and will raise errors in Python3.6
 
 
-@ray.remote
+@ray.remote(num_gpus=N_GPUS_ACTOR)
 class Environment:
     """
     :class:`fragile.Environment` remote interface to be used with ray.
@@ -37,6 +38,7 @@ class Environment:
 
         Args:
             name: Name of the target attribute.
+            default: Value returned when attribute is not found.
 
         Returns:
             Attribute from the wrapped :class:`fragile.Environment`.
@@ -138,7 +140,7 @@ class Environment:
         """
         return self.env.reset(batch_size=batch_size, env_states=env_states, **kwargs)
 
-    def get_params_dict(self) -> typing.StateDict:
+    def get_params_dict(self) -> StateDict:
         """Return the parameter dictionary of the wrapped :class:`fragile.Environment`."""
         return self.env.get_params_dict()
 
@@ -147,8 +149,8 @@ class Environment:
         return getattr(self.env, name)(**kwargs)
 
 
-@ray.remote
-def merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
+@ray.remote(num_gpus=N_GPUS_ACTOR, max_calls=MAX_CALLS_ACTOR)
+def merge_data(data_dicts: List[Dict[str, Tensor]]):
     """
     Group together the data returned from calling ``make_transitions`` in several \
     remote :class:`Environment`.
@@ -156,12 +158,12 @@ def merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
 
     kwargs = {}
     for k in data_dicts[0].keys():
-        grouped = tensor.concatenate([ddict[k] for ddict in data_dicts])
+        grouped = judo.concatenate([ddict[k] for ddict in data_dicts])
         kwargs[k] = grouped
     return kwargs
 
 
-@ray.remote
+@ray.remote(num_gpus=N_GPUS_ACTOR)
 class RayEnv(CoreEnv):
     """Step an :class:`Environment` in parallel using ``ray``."""
 
@@ -198,6 +200,7 @@ class RayEnv(CoreEnv):
 
         Args:
             name: Name of the target attribute.
+            default: Value returned when attribute is not found.
 
         Returns:
             Attribute from the wrapped :class:`fragile.Environment`.
@@ -258,10 +261,9 @@ class RayEnv(CoreEnv):
     def _split_inputs_in_chunks(self, *args, **kwargs):
         self.kwargs_mode = len(args) == 0
         if self.kwargs_mode:
-
-            return split_kwargs_in_chunks(kwargs, len(self.envs))
+            return judo.split_kwargs_in_chunks(kwargs, len(self.envs))
         else:
-            return split_args_in_chunks(args, len(self.envs))
+            return judo.split_args_in_chunks(args, len(self.envs))
 
     def _make_transitions(self, split_results):
         results_ids = [

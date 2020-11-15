@@ -2,9 +2,9 @@ import logging
 import traceback
 from typing import Any, Callable, Iterable, List
 
+import judo
 import numpy
 
-from fragile.backend import tensor, typing
 from fragile.core.base_classes import (
     BaseCritic,
     BaseEnvironment,
@@ -13,7 +13,7 @@ from fragile.core.base_classes import (
 )
 from fragile.core.states import OneWalker, StatesEnv, StatesModel, StatesWalkers
 from fragile.core.tree import HistoryTree
-from fragile.core.utils import running_in_ipython
+from fragile.core.typing import Scalar, Tensor
 from fragile.core.walkers import Walkers
 
 
@@ -82,7 +82,7 @@ class Swarm(BaseSwarm):
         )
         self._notebook_container = None
         self._use_notebook_widget = use_notebook_widget
-        self._ipython_mode = running_in_ipython() and not force_logging
+        self._ipython_mode = judo.running_in_ipython() and not force_logging
         self.setup_notebook_container()
 
     def __len__(self) -> int:
@@ -115,17 +115,17 @@ class Swarm(BaseSwarm):
         return self._walkers
 
     @property
-    def best_time(self) -> typing.Tensor:
+    def best_time(self) -> Tensor:
         """Return the state of the best walker found in the current algorithm run."""
         return self.walkers.best_time
 
     @property
-    def best_state(self) -> typing.Tensor:
+    def best_state(self) -> Tensor:
         """Return the state of the best walker found in the current algorithm run."""
         return self.walkers.best_state
 
     @property
-    def best_reward(self) -> typing.Scalar:
+    def best_reward(self) -> Scalar:
         """Return the reward of the best walker found in the current algorithm run."""
         return self.walkers.best_reward
 
@@ -138,7 +138,7 @@ class Swarm(BaseSwarm):
         return self.walkers.best_id
 
     @property
-    def best_obs(self) -> typing.Tensor:
+    def best_obs(self) -> Tensor:
         """
         Return the observation corresponding to the best walker found in the \
         current algorithm run.
@@ -269,7 +269,7 @@ class Swarm(BaseSwarm):
         root_id = (
             self.walkers.get("id_walkers")[0]
             if root_walker is None
-            else tensor.copy(root_walker.id_walkers[0])
+            else judo.copy(root_walker.id_walkers[0])
         )
         self.walkers.states.id_walkers[:] = root_id
         self.walkers.states.best_id = root_id
@@ -440,7 +440,7 @@ class Swarm(BaseSwarm):
         model_states = self.walkers.model_states
         env_states = self.walkers.env_states
 
-        parent_ids = tensor.copy(self.walkers.states.id_walkers) if self.tree is not None else None
+        parent_ids = judo.copy(self.walkers.states.id_walkers) if self.tree is not None else None
         model_states = self.model.predict(
             env_states=env_states, model_states=model_states, walkers_states=self.walkers.states
         )
@@ -459,7 +459,7 @@ class Swarm(BaseSwarm):
         """
         if self.tree is not None:
             self.tree.add_states(
-                parent_ids=tensor.to_numpy(parent_ids),
+                parent_ids=judo.to_numpy(parent_ids),
                 env_states=self.walkers.env_states,
                 model_states=self.walkers.model_states,
                 walkers_states=self.walkers.states,
@@ -477,7 +477,7 @@ class Swarm(BaseSwarm):
     def _update_env_with_root(self, root_walker, env_states) -> StatesEnv:
         env_states.rewards[:] = root_walker.rewards
         env_states.states[:] = root_walker.states
-        env_states.observs = tensor.tile(root_walker.observs, (len(env_states), 1))
+        env_states.observs = judo.tile(root_walker.observs, (len(env_states), 1))
         return env_states
 
 

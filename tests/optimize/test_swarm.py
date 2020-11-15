@@ -1,8 +1,7 @@
-# import numpy
+import judo
+from judo import Bounds
 import pytest
 
-from fragile.backend import tensor
-from fragile.core import Bounds
 from fragile.optimize import FunctionMapper
 from fragile.optimize.models import NormalContinuous
 
@@ -10,7 +9,7 @@ from fragile.optimize.models import NormalContinuous
 @pytest.fixture(scope="class")
 def mapper():
     def potential_well(x):
-        return tensor.sum((x - 1) ** 2, 1) - 1
+        return judo.sum((x - 1) ** 2, 1) - 1
 
     bounds = Bounds.from_tuples([(-10, 10), (-5, 5)])
 

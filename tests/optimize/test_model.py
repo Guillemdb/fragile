@@ -1,8 +1,7 @@
+from judo import Backend, Bounds
 import numpy as np
 import pytest
 
-from fragile.backend import Backend
-from fragile.core import Bounds
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.optimize.models import CMAES, ESModel
 

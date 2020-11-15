@@ -1,7 +1,7 @@
-# import numpy
-import pytest  # noqa: F401
+import judo
+from judo import dtype, tensor
+import pytest
 
-from fragile.backend import dtype, tensor
 from fragile.core.dt_samplers import GaussianDt
 from fragile.core.models import (
     _DtModel,
@@ -109,7 +109,7 @@ class DummyCritic(BaseCritic):
         walkers_states: StatesWalkers = None,
     ) -> States:
         batch_size = batch_size or env_states.n
-        return States(batch_size=batch_size, critic_score=5 * tensor.ones(batch_size))
+        return States(batch_size=batch_size, critic_score=5 * judo.ones(batch_size))
 
 
 class TestDtModel:
@@ -158,7 +158,7 @@ class TestDiscreteUniform:
         model_states = model.predict(batch_size=1000)
         actions = model_states.actions
         assert len(actions.shape) == 1
-        assert len(tensor.unique(actions)) <= n_actions
+        assert len(judo.unique(actions)) <= n_actions
         assert all(actions >= 0)
         assert all(actions <= n_actions)
         assert "critic_score" in model_states.keys()
@@ -169,10 +169,10 @@ class TestDiscreteUniform:
         model_states = model.sample(batch_size=states.n, model_states=states)
         actions = model_states.actions
         assert len(actions.shape) == 1
-        assert len(tensor.unique(actions)) <= n_actions
+        assert len(judo.unique(actions)) <= n_actions
         assert all(actions >= 0)
         assert all(actions <= n_actions)
-        assert tensor.allclose(actions, tensor.astype(actions, dtype.int))
+        assert judo.allclose(actions, judo.astype(actions, dtype.int))
         assert "critic_score" in model_states.keys()
         assert (model_states.critic_score == 1).all()
 
@@ -182,7 +182,7 @@ class TestDiscreteUniform:
         model_states = model.predict(batch_size=1000)
         actions = model_states.actions
         assert len(actions.shape) == 1
-        assert len(tensor.unique(actions)) <= n_actions
+        assert len(judo.unique(actions)) <= n_actions
         assert all(actions >= 0)
         assert all(actions <= n_actions)
         assert "critic_score" in model_states.keys()
@@ -192,10 +192,10 @@ class TestDiscreteUniform:
         model_states = model.sample(batch_size=states.n, model_states=states)
         actions = model_states.actions
         assert len(actions.shape) == 1
-        assert len(tensor.unique(actions)) <= n_actions
+        assert len(judo.unique(actions)) <= n_actions
         assert all(actions >= 0)
         assert all(actions <= n_actions)
-        assert tensor.allclose(actions, tensor.astype(actions, dtype.int))
+        assert judo.allclose(actions, judo.astype(actions, dtype.int))
         assert "critic_score" in model_states.keys()
         assert (model_states.critic_score == 5).all()
 
@@ -248,13 +248,13 @@ class TestRandomNormal:
         actions = model.predict(batch_size=10000).actions
         assert actions.min() >= -5
         assert actions.max() <= 5
-        assert tensor.allclose(actions.mean(), tensor(0.0), atol=0.05)
-        assert tensor.allclose(actions.std(), tensor(1.0), atol=0.05)
+        assert judo.allclose(actions.mean(), tensor(0.0), atol=0.05)
+        assert judo.allclose(actions.std(), tensor(1.0), atol=0.05)
 
         bounds = Bounds(low=-10, high=30, shape=(3, 10))
         model = NormalContinuous(bounds=bounds, loc=5, scale=2)
         actions = model.predict(batch_size=10000).actions
         assert actions.min() >= -10
         assert actions.max() <= 30
-        assert tensor.allclose(actions.mean(), tensor(5.0), atol=0.05), actions.mean()
-        assert tensor.allclose(actions.std(), tensor(2.0), atol=0.05), actions.std()
+        assert judo.allclose(actions.mean(), tensor(5.0), atol=0.05), actions.mean()
+        assert judo.allclose(actions.std(), tensor(2.0), atol=0.05), actions.std()

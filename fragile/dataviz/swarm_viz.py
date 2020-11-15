@@ -257,10 +257,10 @@ class LandscapeViz(SwarmViz):
     SWARM_STATS_TYPES = (
         DistanceLandscape,
         RewardLandscape,
-        VirtualRewardLandscape,
-        WalkersDensity,
-        BestReward,
-        SummaryTable,
+        # VirtualRewardLandscape,
+        # WalkersDensity,
+        # BestReward,
+        # SummaryTable,
     )
     PLOT_NAMES = tuple([plot.name for plot in SWARM_STATS_TYPES])
     SWARM_PLOTS = dict(zip(PLOT_NAMES, SWARM_STATS_TYPES))

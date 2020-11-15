@@ -1,9 +1,10 @@
 import sys
 from typing import Callable, Tuple
 
+import judo
+from judo import dtype
 import pytest
 
-from fragile.backend import dtype, tensor
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesModel
 from fragile.distributed.env import ParallelEnv, RayEnv
@@ -65,7 +66,7 @@ def create_env_and_model_states(name="classic") -> Callable:
         env = parallel_environment()
         params = {"actions": {"dtype": dtype.int64}, "critic": {"dtype": dtype.float32}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
-        states.update(actions=tensor.ones(N_WALKERS), critic=tensor.ones(N_WALKERS))
+        states.update(actions=judo.ones(N_WALKERS), critic=judo.ones(N_WALKERS))
         return env, states
 
     if name.lower() == "ray_env":
@@ -78,11 +79,9 @@ def create_env_and_model_states(name="classic") -> Callable:
         return _parallel_environment
 
 
-# env_fixture_params = (
-#    ["ray_env", "parallel_environment"] if sys.version_info < (3, 8) else ["parallel_environment"]
-# )
-
-env_fixture_params = ["ray_env", "parallel_environment"]
+env_fixture_params = (
+    ["ray_env"] if judo.Backend.can_use_cuda() else ["ray_env", "parallel_environment"]
+)
 
 
 @pytest.fixture(params=env_fixture_params, scope="class")
@@ -112,11 +111,7 @@ def env_data(request) -> Tuple[CoreEnv, StatesModel]:
         kill_parallel_env()
 
 
-# ray_function_fixture_params = (
-#    ["parallel_function", "ray_function"] if sys.version_info < (3, 8) else ["parallel_function"]
-# )
-
-ray_function_fixture_params = ["ray_function"] if sys.version_info < (3, 8) else []
+ray_function_fixture_params = ["ray_function"]
 
 
 @pytest.fixture(params=ray_function_fixture_params)

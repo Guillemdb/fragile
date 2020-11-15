@@ -1,10 +1,10 @@
 from typing import Callable, Iterable, List, Tuple
 
+from judo import typing
 import numpy
 import ray
 from tqdm.auto import tqdm
 
-from fragile.backend import typing
 from fragile.core.base_classes import BaseEnvironment, BaseModel
 from fragile.core.memory import ReplayMemory as CoreMemory
 from fragile.core.states import OneWalker

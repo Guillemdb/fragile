@@ -1,7 +1,10 @@
 from typing import Callable, Dict, List, Tuple, Union
 
-from fragile.backend import dtype, random_state, typing
+import judo
+from judo import random_state
+
 from fragile.core.states import OneWalker, States, StatesEnv, StatesModel, StatesWalkers
+from fragile.core.typing import StateDict, Tensor
 
 
 class StatesOwner:
@@ -14,12 +17,13 @@ class StatesOwner:
     STATE_CLASS = States
 
     @classmethod
-    def seed(cls, seed: int = random_state.seed()):
+    def seed(cls, seed: int = None):
         """Set the random seed of the random number generator."""
+        seed = random_state.seed() if seed is None else seed
         cls.random_state.seed(seed)
 
     @classmethod
-    def get_params_dict(cls) -> typing.StateDict:
+    def get_params_dict(cls) -> StateDict:
         """
         Return an state_dict to be used for instantiating an States class.
 
@@ -61,72 +65,6 @@ class StatesOwner:
         return state
 
 
-class BaseTree:
-    """Data structure in charge of storing the history of visited states of an algorithm run."""
-
-    def __init__(self, root_id):
-        """
-        Initialize a :class:`BaseTree`.
-
-        Args:
-            root_id: The node id of the root node.
-
-        """
-        self.root_id = root_id
-
-    def __call__(self, *args, **kwargs) -> "BaseTree":
-        """
-        Return the current instance of :class:`BaseTree`.
-
-        This is used to avoid defining a ``tree_callable `` as \
-        ``lambda: tree_instance`` when initializing a :class:`Swarm`. If the \
-        :class:`BaseTree` needs is passed to a remote process, you may need \
-        to write custom serialization for it, or resort to creating an appropriate \
-        ``tree_callable``.
-        """
-        return self
-
-    def add_states(
-        self,
-        parent_ids: List[int],
-        env_states: States = None,
-        model_states: States = None,
-        walkers_states: States = None,
-        n_iter: int = None,
-    ) -> None:
-        """
-        Update the history of the tree adding the necessary data to recreate a \
-        the trajectories sampled by the :class:`Swarm`.
-
-        Args:
-            parent_ids: List of states hashes representing the parent nodes of \
-                        the current states.
-            env_states: :class:`StatesEnv` containing the data that will be \
-                        saved as new leaves in the tree.
-            model_states: :class:`StatesModel` containing the data that will be \
-                        saved as new leaves in the tree.
-            walkers_states: :class:`StatesWalkers` containing the data that will be \
-                        saved as new leaves in the tree.
-            n_iter: Number of iteration of the algorithm when the data was sampled.
-
-        Returns:
-            None
-
-        """
-        pass
-
-    def reset(self, *args, **kwargs) -> None:
-        """
-        Delete all the data currently stored and reset the internal state of \
-        the tree.
-        """
-        pass
-
-    def prune_tree(self, *args, **kwargs) -> None:
-        """Remove branches of the tree."""
-        pass
-
-
 class BaseCritic(StatesOwner):
     """
     Perform additional computation. It can be used in a :class:`Walkers` \
@@ -136,7 +74,7 @@ class BaseCritic(StatesOwner):
     random_state = random_state
 
     @classmethod
-    def get_params_dict(cls) -> typing.StateDict:
+    def get_params_dict(cls) -> StateDict:
         """
         Return an state_dict to be used for instantiating an States class.
 
@@ -153,7 +91,7 @@ class BaseCritic(StatesOwner):
         will be accessed using the name_1 attribute of the class.
         """
         state_dict = {
-            "critic_score": {"size": tuple([1]), "dtype": dtype.float32},
+            "critic_score": {"size": tuple([1]), "dtype": judo.float32},
         }
         return state_dict
 
@@ -311,7 +249,7 @@ class BaseEnvironment(StatesOwner):
 
     def states_to_data(
         self, model_states: StatesModel, env_states: StatesEnv
-    ) -> Union[Dict[str, typing.Tensor], Tuple[typing.Tensor, ...]]:
+    ) -> Union[Dict[str, Tensor], Tuple[Tensor, ...]]:
         """
         Extract the data from the :class:`StatesEnv` and the :class:`StatesModel` \
         and return the values that will be passed to ``make_transitions``.
@@ -330,7 +268,7 @@ class BaseEnvironment(StatesOwner):
         """
         raise NotImplementedError
 
-    def make_transitions(self, *args, **kwargs) -> Dict[str, typing.Tensor]:
+    def make_transitions(self, *args, **kwargs) -> Dict[str, Tensor]:
         """
         Return the data corresponding to the new state of the environment after \
         using the input data to make the corresponding state transition.
@@ -353,7 +291,7 @@ class BaseEnvironment(StatesOwner):
         """
         raise NotImplementedError
 
-    def get_params_dict(self) -> typing.StateDict:
+    def get_params_dict(self) -> StateDict:
         """
         Return an state_dict to be used for instantiating the states containing \
         the data describing the Environment.
@@ -413,7 +351,7 @@ class BaseModel(StatesOwner):
         """
         return self
 
-    def get_params_dict(self) -> typing.StateDict:
+    def get_params_dict(self) -> StateDict:
         """
         Return an state_dict to be used for instantiating the states containing \
         the data describing the Model.
@@ -569,7 +507,7 @@ class BaseWalkers(StatesOwner):
         """Increment the current epoch counter."""
         self._epoch += 1
 
-    def get_params_dict(self) -> typing.StateDict:
+    def get_params_dict(self) -> StateDict:
         """Return the params_dict of the internal StateOwners."""
         state_dict = {
             name: getattr(self, name).get_params_dict()
@@ -633,7 +571,7 @@ class BaseWalkers(StatesOwner):
         """Sample the clone probability distribution and clone the walkers accordingly."""
         raise NotImplementedError
 
-    def get_in_bounds_compas(self) -> typing.Tensor:
+    def get_in_bounds_compas(self) -> Tensor:
         """
         Return an array of indexes corresponding to an alive walker chosen \
         at random.

@@ -1,6 +1,6 @@
+from judo import random_state
 import numpy
 
-from fragile.backend import random_state
 from fragile.core.models import NormalContinuous
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
 

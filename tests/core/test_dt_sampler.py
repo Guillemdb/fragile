@@ -1,4 +1,3 @@
-import numpy
 import pytest
 
 from fragile.core.dt_samplers import BaseDtSampler, ConstantDt, GaussianDt, UniformDt

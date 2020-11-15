@@ -4,10 +4,10 @@ from typing import Any, Callable, Tuple, Union
 import holoviews
 from holoviews import Store
 from holoviews.streams import Buffer, Pipe
+import judo
+from judo.typing import Scalar
 import numpy
 from scipy.interpolate import griddata
-
-from fragile.backend import typing
 
 
 class Plot:
@@ -123,7 +123,7 @@ class StreamingPlot(Plot):
 
     def get_plot_data(self, data):
         """Perform the necessary data wrangling for plotting the data."""
-        return data
+        return judo.to_numpy(data)
 
     def stream_data(self, data) -> None:
         """Stream data to the plot and keep track of how many times the data has been streamed."""
@@ -364,7 +364,7 @@ class Histogram(StreamingPlot):
 
         Args:
             data: Tuple containing (values, bins), xlim. xlim is a tuple \
-                  containing two typing.Scalars that represent the limits of the x \
+                  containing two typing_.Scalars that represent the limits of the x \
                   axis of the histogram.
 
         Returns:
@@ -409,8 +409,7 @@ class Histogram(StreamingPlot):
     def get_plot_data(
         self, data: numpy.ndarray
     ) -> Tuple[
-        Tuple[numpy.ndarray, numpy.ndarray],
-        Tuple[Union[typing.Scalar, None], Union[typing.Scalar, None]],
+        Tuple[numpy.ndarray, numpy.ndarray], Tuple[Union[Scalar, None], Union[Scalar, None]],
     ]:
         """
         Calculate the histogram of the streamed data.
@@ -420,12 +419,13 @@ class Histogram(StreamingPlot):
 
         Returns:
             Tuple containing (values, bins), xlim. xlim is a tuple \
-                  containing two typing.Scalars that represent the limits of the x \
+                  containing two typing_.Scalars that represent the limits of the x \
                   axis of the histogram.
 
         """
         if data is None:
             data = numpy.arange(10)
+        data = judo.to_numpy(data)
         data[numpy.isnan(data)] = 0.0
         return numpy.histogram(data, self.n_bins), self.xlim
 
@@ -604,9 +604,10 @@ class Landscape2D(StreamingPlot):
     def get_plot_data(self, data: Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]):
         """Create the meshgrid needed to interpolate the target data points."""
         x, y, z = (data[:, 0], data[:, 1], data[:, 2]) if isinstance(data, numpy.ndarray) else data
+        x, y, z = judo.to_numpy(x), judo.to_numpy(y), judo.to_numpy(z)
         # target grid to interpolate to
         xi = numpy.linspace(x.min(), x.max(), self.n_points)
-        yi = numpy.linspace(y.min(), y.max(), self.n_points)
+        yi = numpy.linspace(x.min(), x.max(), self.n_points)
         xx, yy = numpy.meshgrid(xi, yi)
         return x, y, xx, yy, z, self.xlim, self.ylim
 

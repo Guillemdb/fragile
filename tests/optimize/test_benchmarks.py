@@ -2,8 +2,8 @@ import itertools
 
 import numpy
 import pytest
-
-from fragile.backend import dtype, tensor, random_state
+import judo
+from judo import tensor, random_state
 from fragile.optimize.benchmarks import (
     EggHolder,
     LennardJones,
@@ -27,7 +27,7 @@ class TestBenchmarks:
         new_shape = (1,) + tuple(best.shape)
         val = wiki_benchmark.function(best.reshape(new_shape))
         bench = wiki_benchmark.benchmark
-        assert tensor.allclose(val[0], bench), wiki_benchmark.__class__.__name__
+        assert judo.allclose(val[0], bench), wiki_benchmark.__class__.__name__
 
     @pytest.mark.parametrize("dims", [2, 3, 6])
     def test_get_bounds(self, wiki_benchmark, dims):

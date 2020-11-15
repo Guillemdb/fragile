@@ -4,12 +4,12 @@ import warnings
 
 import holoviews
 from holoviews import Store
+import judo
+from judo import Bounds
+from judo.functions.fractalai import relativize
 import numpy
 import pandas
 
-from fragile.backend import tensor
-from fragile.backend.functions.fractalai import relativize
-from fragile.core.bounds import Bounds
 from fragile.core.swarm import Swarm
 from fragile.core.utils import get_plangym_env
 from fragile.dataviz.streaming import Curve, Histogram, Landscape2D, RGB, Table
@@ -134,7 +134,7 @@ class AtariBestFrame(RGB):
 
         """
         env = get_plangym_env(swarm)
-        state = tensor.to_numpy(state)
+        state = judo.to_numpy(state)
         env.set_state(state.astype(numpy.uint8))
         env.step(0)
         return numpy.asarray(env.ale.getScreenRGB(), dtype=numpy.uint8)
@@ -145,6 +145,7 @@ class AtariBestFrame(RGB):
         if swarm is None:
             return numpy.zeros((210, 160, 3))
         state = swarm.get("best_state")
+        state = judo.to_numpy(state)
         return self.image_from_state(swarm=swarm, state=state)
 
     def opts(self, title="Best state sampled", *args, **kwargs):
@@ -241,6 +242,7 @@ class SwarmHistogram(Histogram):
         if swarm is None:
             return super(SwarmHistogram, self).get_plot_data(swarm)
         data = swarm.get(attr) if swarm is not None else numpy.arange(10)
+        data = judo.to_numpy(data)
         self._update_lims(data)
         return super(SwarmHistogram, self).get_plot_data(data)
 
@@ -343,10 +345,10 @@ def get_xy_coords(swarm: Swarm, use_embedding: False) -> numpy.ndarray:
             model_states=swarm.walkers.model_states,
             batch_size=swarm.walkers.n,
         )
-        return X[:, :2]
+        return judo.to_numpy(X[:, :2])
     elif isinstance(swarm, numpy.ndarray):
         return swarm
-    return swarm.walkers.env_states.observs[:, :2]
+    return judo.to_numpy(swarm.walkers.env_states.observs[:, :2])
 
 
 class SwarmLandscape(Landscape2D):
@@ -382,6 +384,8 @@ class SwarmLandscape(Landscape2D):
             swarm.critic.bounds if has_embedding(swarm) and self.use_embeddings else backup_bounds
         )
         self.xlim, self.ylim = bounds.to_tuples()[:2]
+        self.xlim = judo.to_numpy(self.xlim[0]), judo.to_numpy(self.xlim[1])
+        self.ylim = judo.to_numpy(self.ylim[0]), judo.to_numpy(self.ylim[1])
 
     def opts(self, xlim="default", ylim="default", *args, **kwargs):
         """
@@ -428,7 +432,7 @@ class RewardLandscape(SwarmLandscape):
 
     def get_z_coords(self, swarm: Swarm, X: numpy.ndarray = None):
         """Return the normalized ``cum_rewards`` of the walkers."""
-        rewards: numpy.ndarray = relativize(swarm.get("cum_rewards"))
+        rewards: numpy.ndarray = judo.to_numpy(relativize(swarm.get("cum_rewards")))
         return rewards
 
 
@@ -448,7 +452,7 @@ class VirtualRewardLandscape(SwarmLandscape):
 
     def get_z_coords(self, swarm: Swarm, X: numpy.ndarray = None):
         """Return the normalized ``virtual_rewards`` of the walkers."""
-        virtual_rewards: numpy.ndarray = swarm.get("virtual_rewards")
+        virtual_rewards: numpy.ndarray = judo.to_numpy(swarm.get("virtual_rewards"))
         return virtual_rewards
 
 
@@ -468,7 +472,7 @@ class DistanceLandscape(SwarmLandscape):
 
     def get_z_coords(self, swarm: Swarm, X: numpy.ndarray = None):
         """Return the normalized ``distances`` of the walkers."""
-        distances: numpy.ndarray = swarm.get("distances")
+        distances: numpy.ndarray = judo.to_numpy(swarm.get("distances"))
         return distances
 
 
@@ -635,7 +639,7 @@ class GridLandscape(SwarmLandscape):
             )
         else:
             memory_values = numpy.arange(grid.shape[0])
-        return memory_values
+        return judo.to_numpy(memory_values)
 
 
 class KDELandscape(SwarmLandscape):
@@ -683,4 +687,4 @@ class KDELandscape(SwarmLandscape):
             memory_values = relativize(-memory_values)
         else:
             memory_values = numpy.arange(grid.shape[0])
-        return memory_values
+        return judo.to_numpy(memory_values)

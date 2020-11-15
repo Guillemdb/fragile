@@ -1,12 +1,12 @@
 from typing import Callable, Dict, Tuple, Union
 
+import judo
+from judo import Backend, Bounds, tensor, typing
 import numpy
 from scipy.optimize import Bounds as ScipyBounds
 from scipy.optimize import minimize
 
-from fragile.backend import Backend, dtype, tensor, typing
 from fragile.core.env import Environment
-from fragile.core.models import Bounds
 from fragile.core.states import StatesEnv, StatesModel
 
 
@@ -98,8 +98,8 @@ class Function(Environment):
 
         """
         if (
-            not (dtype.is_tensor(high) or isinstance(high, (list, tuple)))
-            and not (dtype.is_tensor(low) or isinstance(low, (list, tuple)))
+            not (judo.is_tensor(high) or isinstance(high, (list, tuple)))
+            and not (judo.is_tensor(low) or isinstance(low, (list, tuple)))
             and shape is None
         ):
             raise TypeError("Need to specify shape or high or low must be a numpy array.")
@@ -173,7 +173,7 @@ class Function(Environment):
             equal to batch_size.
 
         """
-        oobs = tensor.zeros(batch_size, dtype=dtype.bool)
+        oobs = judo.zeros(batch_size, dtype=judo.bool)
         new_points = self.sample_bounds(batch_size=batch_size)
         rewards = self.function(new_points).flatten()
         new_states = self.states_from_data(
@@ -200,9 +200,9 @@ class Function(Environment):
             and ``False`` otherwise.
 
         """
-        oobs = tensor.logical_not(self.bounds.points_in_bounds(points)).flatten()
+        oobs = judo.logical_not(self.bounds.points_in_bounds(points)).flatten()
         if self.custom_domain_check is not None:
-            points_in_bounds = tensor.logical_not(oobs)
+            points_in_bounds = judo.logical_not(oobs)
             oobs[points_in_bounds] = self.custom_domain_check(
                 points[points_in_bounds], rewards[points_in_bounds], len(rewards)
             )
@@ -221,13 +221,13 @@ class Function(Environment):
             :class:`Function` domain, stacked across the first dimension.
 
         """
-        new_points = tensor.zeros(tuple([batch_size]) + self.shape, dtype=dtype.float32)
+        new_points = judo.zeros(tuple([batch_size]) + self.shape, dtype=judo.float32)
         for i in range(batch_size):
             values = self.random_state.uniform(
-                low=tensor.astype(self.bounds.low, dtype.float),
-                high=tensor.astype(self.bounds.high, dtype.float32),
+                low=judo.astype(self.bounds.low, judo.float),
+                high=judo.astype(self.bounds.high, judo.float32),
             )
-            values = tensor.astype(values, self.bounds.low.dtype)
+            values = judo.astype(values, self.bounds.low.dtype)
             new_points[i, :] = values
 
         return new_points
@@ -276,8 +276,8 @@ class Minimizer:
             return y
 
         bounds = ScipyBounds(
-            ub=tensor.to_numpy(self.bounds.high) if self.bounds is not None else None,
-            lb=tensor.to_numpy(self.bounds.low) if self.bounds is not None else None,
+            ub=judo.to_numpy(self.bounds.high) if self.bounds is not None else None,
+            lb=judo.to_numpy(self.bounds.low) if self.bounds is not None else None,
         )
         return minimize(_optimize, x, bounds=bounds, *self.args, **self.kwargs)
 
@@ -311,10 +311,10 @@ class Minimizer:
             and an array with the values assigned to each of the points found.
 
         """
-        x = tensor.to_numpy(tensor.copy(x))
+        x = judo.to_numpy(judo.copy(x))
         with Backend.use_backend("numpy"):
-            result = tensor.zeros_like(x)
-            rewards = tensor.zeros((x.shape[0], 1))
+            result = judo.zeros_like(x)
+            rewards = judo.zeros((x.shape[0], 1))
             for i in range(x.shape[0]):
                 new_x, reward = self.minimize_point(x[i, :])
                 result[i, :] = new_x

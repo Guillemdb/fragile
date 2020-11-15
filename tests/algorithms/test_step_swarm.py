@@ -1,20 +1,25 @@
+import judo
 from plangym import ClassicControl
 import pytest
 
 from fragile.core import DiscreteEnv, DiscreteUniform
 from fragile.algorithms import FollowBestModel, StepToBest, StepSwarm
-from fragile.distributed.env import ParallelEnv
+from fragile.distributed.env import ParallelEnv, RayEnv
 from tests.core.test_swarm import TestSwarm
+from tests.distributed.ray.test_export_swarm import kill_swarm, init_ray
 
 
-def get_cartpole_env():
-    return ParallelEnv(lambda: DiscreteEnv(ClassicControl(name="CartPole-v0")))
+def cartpole_env():
+    if judo.Backend.can_use_cuda():
+        return RayEnv(lambda: DiscreteEnv(ClassicControl(name="CartPole-v0")), n_workers=2)
+    else:
+        return ParallelEnv(lambda: DiscreteEnv(ClassicControl(name="CartPole-v0")))
 
 
 def create_majority_step_swarm():
     swarm = StepSwarm(
         model=lambda x: DiscreteUniform(env=x),
-        env=get_cartpole_env,
+        env=cartpole_env,
         reward_limit=10,
         n_walkers=100,
         max_epochs=20,
@@ -27,7 +32,7 @@ def create_follow_best_step_swarm():
     swarm = StepSwarm(
         root_model=FollowBestModel,
         model=lambda x: DiscreteUniform(env=x),
-        env=get_cartpole_env,
+        env=cartpole_env,
         reward_limit=101,
         n_walkers=100,
         max_epochs=200,
@@ -40,7 +45,7 @@ def create_follow_best_step_swarm_after_impr():
     swarm = StepSwarm(
         root_model=FollowBestModel,
         model=lambda x: DiscreteUniform(env=x),
-        env=get_cartpole_env,
+        env=cartpole_env,
         reward_limit=101,
         n_walkers=10,  # 0,
         max_epochs=2,  # 200,
@@ -53,7 +58,7 @@ def create_follow_best_step_swarm_after_impr():
 def create_step_to_best():
     swarm = StepToBest(
         model=lambda x: DiscreteUniform(env=x),
-        env=get_cartpole_env,
+        env=cartpole_env,
         reward_limit=51,
         n_walkers=100,
         max_epochs=160,
@@ -68,7 +73,6 @@ def create_step_to_best_after_impr():
 
     env = AtariEnvironment(name="MsPacman-ram-v0", clone_seeds=True, autoreset=True)
     dt = GaussianDt(min_dt=3, max_dt=100, loc_dt=5, scale_dt=2)
-    # get_env = lambda: ParallelEnv(lambda: DiscreteEnv(env))
     swarm = StepToBest(
         model=lambda x: DiscreteUniform(env=x, critic=dt),
         env=lambda: DiscreteEnv(env),
@@ -100,11 +104,20 @@ test_scores = {
 
 @pytest.fixture(params=swarm_names, scope="class")
 def swarm(request):
-    return swarm_dict.get(request.param)()
+    if judo.Backend.can_use_cuda():
+        init_ray()
+    swarm_ = swarm_dict.get(request.param)()
+    yield swarm_
+    if judo.Backend.can_use_cuda():
+        kill_swarm(swarm_)
 
 
 @pytest.fixture(params=swarm_names, scope="class")
 def swarm_with_score(request):
-    swarm = swarm_dict.get(request.param)()
+    if judo.Backend.can_use_cuda():
+        init_ray()
+    swarm_ = swarm_dict.get(request.param)()
     score = test_scores[request.param]
-    return swarm, score
+    yield swarm_, score
+    if judo.Backend.can_use_cuda():
+        kill_swarm(swarm_)

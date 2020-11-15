@@ -1,3 +1,3 @@
-from fragile.backend import Backend
+from judo import Backend
 
 # Backend.set_backend("torch")
