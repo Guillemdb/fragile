@@ -1,11 +1,11 @@
 from typing import Callable, Tuple
 import warnings
 
-# import numpy
+import judo
+from judo import dtype
 from plangym import AtariEnvironment, ClassicControl
 import pytest
 
-from fragile.backend import dtype, tensor
 from fragile.core.env import DiscreteEnv, Environment
 from fragile.core.states import StatesEnv, StatesModel
 
@@ -31,14 +31,14 @@ def create_env_and_model_states(name="classic") -> Callable:
         env = discrete_atari_env()
         params = {"actions": {"dtype": dtype.int64}, "critic": {"dtype": dtype.float32}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
-        states.update(actions=tensor.ones(N_WALKERS), critic=tensor.ones(N_WALKERS))
+        states.update(actions=judo.ones(N_WALKERS), critic=judo.ones(N_WALKERS))
         return env, states
 
     def _classic_control_env():
         env = classic_control_env()
         params = {"actions": {"dtype": dtype.int64}, "dt": {"dtype": dtype.float32}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
-        states.update(actions=tensor.ones(N_WALKERS), dt=tensor.ones(N_WALKERS))
+        states.update(actions=judo.ones(N_WALKERS), dt=judo.ones(N_WALKERS))
         return env, states
 
     if name.lower() == "pacman":
@@ -115,10 +115,10 @@ class TestEnvironment:
 
     def test_states_from_data(self, env_data, batch_size, states_dim):
         env, model_states = env_data
-        states = tensor.zeros((batch_size, states_dim))
-        observs = tensor.ones((batch_size, states_dim))
-        rewards = tensor.arange(batch_size)
-        oobs = tensor.zeros(batch_size, dtype=dtype.bool)
+        states = judo.zeros((batch_size, states_dim))
+        observs = judo.ones((batch_size, states_dim))
+        rewards = judo.arange(batch_size)
+        oobs = judo.zeros(batch_size, dtype=dtype.bool)
         state = env.states_from_data(
             batch_size=batch_size, states=states, observs=observs, rewards=rewards, oobs=oobs
         )

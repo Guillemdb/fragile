@@ -1,10 +1,9 @@
-# Example configuration for Black.
-
 # NOTE: you have to use single-quoted strings in TOML for regular expressions.
 # It's the equivalent of r-strings in Python.  Multiline strings are treated as
 # verbose regular expressions by Black.  Use [ ] to denote a significant space
 # character.
 
+# Example configuration for Black.
 [tool.black]
 line-length = 99
 target-version = ['py34','py35','py36', 'py37', 'py38']
@@ -23,3 +22,64 @@ exclude = '''
   | dist
 )/
 '''
+# Code coverate config
+[tool.coverage.run]
+branch = true
+source = ["fragile"]
+
+[tool.coverage.report]
+exclude_lines =["no cover",
+    'raise NotImplementedError',
+    'if __name__ == "__main__":']
+ignore_errors = true
+omit = ["tests/*"]
+
+# Flakehell config
+[tool.flakehell]
+# optionally inherit from remote config (or local if you want)
+#base = "https://raw.githubusercontent.com/life4/flakehell/master/pyproject.toml"
+# specify any flake8 options. For example, exclude "example.py":
+exclude = [".git", "docs", ".ipynb*", "*.ipynb", ".pytest_cache"]
+# make output nice
+format = "grouped"
+max_line_length = 99
+# show line of source code in output
+show_source = true
+inline_quotes='"'
+import_order_style = "appnexus"
+application_package_names = ["fragile"]
+application_import_names = ["fragile"]
+
+[tool.flakehell.plugins]
+'flake8*' = ["-Q000", "+*", "-D*"]
+flake8-quotes = ["-Q000"]
+pycodestyle = ["+*" ,"-B008","-B301","-C815","-C816","-C812","-D100",
+    "-D105","-D200","-D202","-D301","-D402","-E121","-E123","-E126","-E203","-E226",
+    "-E24","-E704","-F821","-W503","-W504"]
+pyflakes = ["+*"]
+pylint = ["+*" , "-D*"] # disable docs by default
+
+# match by prefix
+[tool.flakehell.exceptions."**/tests/*"]
+pycodestyle = ["-F401", "-F811"] # disable a check
+pyflakes = ["-*"]           # disable a plugin
+
+[tool.flakehell.exceptions."**/__init__.py"]  # Allow unused imports in __init__ files
+pycodestyle = ["-F401", "-F811"]
+pyflakes = ["-F401"]
+
+[tool.pylint.master]
+ignore = 'tests'
+load-plugins =' pylint.extensions.docparams'
+
+[tool.pylint.messages_control]
+disable = 'all,'
+enable = """,
+         missing-param-doc,
+         differing-param-doc,
+         differing-type-doc,
+         missing-return-doc,
+         """
+
+[build-system]
+requires = ["setuptools >= 50.3.2", "wheel", "importlib"]

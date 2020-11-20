@@ -1,10 +1,9 @@
 from typing import Callable
 
-# import numpy
+import judo
+from judo import Backend, Bounds, functions, tensor
 import pytest
 
-from fragile.backend import Backend, dtype, functions, tensor
-from fragile.core import Bounds
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.optimize.benchmarks import sphere
 from fragile.optimize.env import Function, MinimizerWrapper
@@ -20,15 +19,15 @@ def function() -> Function:
 
 
 def local_minimizer():
-    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=dtype.float)
+    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=judo.float)
     env = Function(function=sphere, bounds=bounds)
     return MinimizerWrapper(env)
 
 
 def custom_domain_function():
-    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=dtype.float)
+    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=judo.float)
     env = Function(
-        function=sphere, bounds=bounds, custom_domain_check=lambda x: tensor.norm(x, 1) < 5.0
+        function=sphere, bounds=bounds, custom_domain_check=lambda x, *args: judo.norm(x, 1) < 5.0
     )
     return env
 
@@ -36,19 +35,19 @@ def custom_domain_function():
 def create_env_and_model_states(name="classic") -> Callable:
     def _function():
         env = function()
-        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
+        params = {"actions": {"dtype": judo.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         return env, states
 
     def _local_minimizer():
         env = local_minimizer()
-        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
+        params = {"actions": {"dtype": judo.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         return env, states
 
     def _custom_domain_function():
         env = custom_domain_function()
-        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
+        params = {"actions": {"dtype": judo.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         return env, states
 
@@ -76,7 +75,7 @@ def env_data(request):
 @pytest.fixture(scope="class")
 def function_env() -> Function:
     return Function.from_bounds_params(
-        function=lambda x: tensor.ones(len(x)),
+        function=lambda x: judo.ones(len(x)),
         shape=(2,),
         low=tensor([-10, -5]),
         high=tensor([10, 5]),
@@ -121,9 +120,7 @@ class TestFunction:
     def test_step(self, function_env, batch_size):
         states = function_env.reset(batch_size=batch_size)
         actions = StatesModel(
-            actions=tensor.zeros(states.observs.shape),
-            batch_size=batch_size,
-            dt=tensor.ones((1, 2)),
+            actions=judo.zeros(states.observs.shape), batch_size=batch_size, dt=judo.ones((1, 2)),
         )
         new_states: StatesEnv = function_env.step(actions, states)
         assert isinstance(new_states, StatesEnv)
@@ -138,8 +135,8 @@ class TestFunction:
     @pytest.mark.skipif(not Backend.is_numpy(), reason="only in numpy for now")
     def test_minimizer_step(self):
         minim = local_minimizer()
-        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
+        params = {"actions": {"dtype": judo.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         assert minim.shape == minim.shape
         states = minim.step(model_states=states, env_states=minim.reset(N_WALKERS))
-        assert tensor.allclose(states.rewards.min(), 0)
+        assert judo.allclose(states.rewards.min(), 0)

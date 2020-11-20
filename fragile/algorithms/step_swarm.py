@@ -1,13 +1,15 @@
 import copy
 from typing import Any, Callable, List, Tuple
 
+import judo
+from judo import Backend, tensor
+from judo.data_structures.tree import BaseTree
 import numpy
 
-from fragile.backend import Backend, dtype, tensor, typing
 from fragile.core import Environment, Swarm, SwarmWrapper, Walkers
-from fragile.core.base_classes import BaseModel, BaseTree
+from fragile.core.base_classes import BaseModel
 from fragile.core.states import OneWalker, StatesEnv, StatesModel, StatesWalkers
-from fragile.core.utils import running_in_ipython
+from fragile.core.typing import Scalar, StateDict, Tensor
 
 
 class StepStatesWalkers(StatesWalkers):
@@ -31,7 +33,7 @@ class StepStatesWalkers(StatesWalkers):
         self.init_actions = None
         self.init_dts = None
 
-    def get_params_dict(self) -> typing.StateDict:
+    def get_params_dict(self) -> StateDict:
         """
         Return the same typing.StateDict as :class:`StatesWalkers` with two \
         additional attributes.
@@ -43,13 +45,13 @@ class StepStatesWalkers(StatesWalkers):
 
         """
         params_dict = super(StepStatesWalkers, self).get_params_dict()
-        step_params = {"init_actions": {"dtype": dtype.float}, "init_dts": {"dtype": dtype.float}}
+        step_params = {"init_actions": {"dtype": judo.float}, "init_dts": {"dtype": judo.float}}
         params_dict.update(step_params)
         if self.actions_shape is not None:
             params_dict["init_actions"]["size"] = self.actions_shape
         return params_dict
 
-    def clone(self, **kwargs) -> Tuple[typing.Tensor, typing.Tensor]:
+    def clone(self, **kwargs) -> Tuple[Tensor, Tensor]:
         """
         Perform clone like :class:`StatesWalkers` values and clone\
          ``init_action`` and ``init_dts``.
@@ -62,7 +64,7 @@ class StepStatesWalkers(StatesWalkers):
     def reset(self):
         """Reset the data of the :class:`StepStatesWalkers`."""
         super(StepStatesWalkers, self).reset()
-        self.update(init_actions=tensor.zeros((len(self), 1)), init_dt=tensor.ones((len(self), 1)))
+        self.update(init_actions=judo.zeros((len(self), 1)), init_dt=judo.ones((len(self), 1)))
 
 
 class StepWalkers(Walkers):
@@ -158,13 +160,13 @@ class RootModel(BaseModel):
         """
         return self
 
-    def get_params_dict(self) -> typing.StateDict:
+    def get_params_dict(self) -> StateDict:
         """Return a :class:`typing.StateDict` that defines discrete actions and time steps."""
-        params = {"dt": {"dtype": dtype.int64}}
+        params = {"dt": {"dtype": judo.int64}}
         acts = (
             self.model.get_params_dict()["actions"]
             if self.model is not None
-            else {"actions": {"dtype": dtype.int64}}
+            else {"actions": {"dtype": judo.int64}}
         )
         params.update(acts)
         return params
@@ -218,19 +220,19 @@ class MajorityDiscreteModel(RootModel):
             will use to step the :env:`Environment`.
 
         """
-        init_actions = tensor.astype(walkers.states.init_actions.flatten(), dtype.int)
-        init_actions = tensor.to_numpy(init_actions)
+        init_actions = judo.astype(walkers.states.init_actions.flatten(), judo.int)
+        init_actions = judo.to_numpy(init_actions)
         with Backend.use_backend("numpy"):
             y = numpy.bincount(init_actions)
             most_used_action = numpy.nonzero(y)[0][0]
         most_used_action = tensor(most_used_action)
         root_model_states = StatesModel(
             batch_size=1,
-            state_dict={"actions": {"dtype": dtype.int64}, "dt": {"dtype": dtype.int64}},
+            state_dict={"actions": {"dtype": judo.int64}, "dt": {"dtype": judo.int64}},
         )
         root_model_states.actions[:] = most_used_action
         if hasattr(root_model_states, "dt"):
-            init_dts = tensor.astype(walkers.states.init_dts.flatten(), dtype.int)
+            init_dts = judo.astype(walkers.states.init_dts.flatten(), judo.int)
             index_dt = init_actions == most_used_action
             target_dt = init_dts[index_dt].min()
             root_model_states.dt[:] = target_dt
@@ -261,15 +263,14 @@ class FollowBestModel(RootModel):
             will use to step the :env:`Environment`.
 
         """
-        init_actions = tensor.astype(walkers.states.init_actions.flatten(), dtype.int)
+        init_actions = judo.astype(walkers.states.init_actions.flatten(), judo.int)
         best_ix = walkers.get_best_index()
         root_model_states = StatesModel(
-            batch_size=1,
-            state_dict={"actions": {"dtype": dtype.int64}, "dt": {"dtype": dtype.int}},
+            batch_size=1, state_dict={"actions": {"dtype": judo.int64}, "dt": {"dtype": judo.int}},
         )
         root_model_states.actions[:] = init_actions[best_ix]
         if hasattr(root_model_states, "dt"):
-            target_dt = tensor.astype(walkers.states.init_dt.flatten(), dtype.int)[best_ix]
+            target_dt = judo.astype(walkers.states.init_dt.flatten(), judo.int)[best_ix]
             root_model_states.dt[:] = target_dt
         return root_model_states
 
@@ -317,7 +318,7 @@ class StepSwarm(Swarm):
         show_pbar: bool = True,
         walkers: Callable[..., StepWalkers] = StepWalkers,
         swarm: Callable[..., Swarm] = Swarm,
-        reward_limit: typing.Scalar = None,
+        reward_limit: Scalar = None,
         max_epochs: int = None,
         accumulate_rewards: bool = True,
         minimize: bool = False,
@@ -389,7 +390,7 @@ class StepSwarm(Swarm):
         """
         self._notebook_container = None
         self._use_notebook_widget = use_notebook_widget
-        self._ipython_mode = running_in_ipython() and not force_logging
+        self._ipython_mode = judo.running_in_ipython() and not force_logging
         self.setup_notebook_container()
         self.internal_swarm = None
         self._init_internal_swarm(
@@ -478,9 +479,7 @@ class StepSwarm(Swarm):
 
     def __repr__(self):
         with numpy.printoptions(linewidth=100, threshold=200, edgeitems=9):
-            init_actions = tensor.to_numpy(
-                self.internal_swarm.walkers.states.init_actions.flatten()
-            )
+            init_actions = judo.to_numpy(self.internal_swarm.walkers.states.init_actions.flatten())
             with Backend.use_backend("numpy"):
                 y = numpy.bincount(init_actions.astype(int))
                 ii = numpy.nonzero(y)[0]
@@ -494,17 +493,17 @@ class StepSwarm(Swarm):
         return self._max_epochs
 
     @property
-    def best_time(self) -> typing.Tensor:
+    def best_time(self) -> Tensor:
         """Return the state of the best walker found in the current algorithm run."""
         return self.root_walker.times[0]
 
     @property
-    def best_state(self) -> typing.Tensor:
+    def best_state(self) -> Tensor:
         """Return the state of the best walker found in the current algorithm run."""
         return self.root_walker.states[0]
 
     @property
-    def best_reward(self) -> typing.Scalar:
+    def best_reward(self) -> Scalar:
         """Return the reward of the best walker found in the current algorithm run."""
         return self.root_walker.rewards[0]
 
@@ -517,7 +516,7 @@ class StepSwarm(Swarm):
         return self.root_walker.id_walkers[0]
 
     @property
-    def best_obs(self) -> typing.Tensor:
+    def best_obs(self) -> Tensor:
         """
         Return the observation corresponding to the best walker found in the \
         current algorithm run.
@@ -660,10 +659,10 @@ class StepSwarm(Swarm):
         )
 
         self.root_walker = OneWalker(
-            reward=tensor.copy(cum_rewards[0]),
-            observ=tensor.copy(self.root_env_states.observs[0]),
-            state=tensor.copy(self.root_env_states.states[0]),
-            time=tensor.copy(times[0]),
+            reward=judo.copy(cum_rewards[0]),
+            observ=judo.copy(self.root_env_states.observs[0]),
+            state=judo.copy(self.root_env_states.states[0]),
+            time=judo.copy(times[0]),
             id_walker=root_id.squeeze(),
         )
 
@@ -712,9 +711,9 @@ class StepToBest(StepSwarm):
             cum_rewards=cum_rewards, id_walkers=tensor([root_id]), times=times,
         )
         self.root_walker = OneWalker(
-            reward=tensor.copy(cum_rewards[0]),
-            observ=tensor.copy(self.root_env_states.observs[0]),
-            state=tensor.copy(self.root_env_states.states[0]),
-            time=tensor.copy(times[0]),
+            reward=judo.copy(cum_rewards[0]),
+            observ=judo.copy(self.root_env_states.observs[0]),
+            state=judo.copy(self.root_env_states.states[0]),
+            time=judo.copy(times[0]),
             id_walker=root_id,
         )

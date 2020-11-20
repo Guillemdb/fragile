@@ -1,8 +1,8 @@
-# import numpy
+import judo
+from judo import Backend, random_state, tensor
 from plangym import AtariEnvironment, ClassicControl
 import pytest
 
-from fragile.backend import Backend, random_state, tensor
 from fragile.core.dt_samplers import GaussianDt
 from fragile.core.env import BaseEnvironment, DiscreteEnv
 from fragile.core.models import BaseModel, DiscreteUniform, NormalContinuous
@@ -105,8 +105,8 @@ class TestSwarm:
         state_dict = param_dict["states"]
         obs_size = obs_dict.get("size", obs_dict["shape"][1:])
         state_size = state_dict.get("size", state_dict["shape"][1:])
-        obs = tensor.astype(random_state.random(obs_size), obs_dict["dtype"])
-        state = tensor.astype(random_state.random(state_size), state_dict["dtype"])
+        obs = judo.astype(random_state.random(obs_size), obs_dict["dtype"])
+        state = judo.astype(random_state.random(state_size), state_dict["dtype"])
         reward = 160290
         root_walker = OneWalker(observ=obs, reward=reward, state=state)
         swarm.reset(root_walker=root_walker)

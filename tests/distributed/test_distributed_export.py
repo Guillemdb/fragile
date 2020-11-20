@@ -1,6 +1,3 @@
-import sys
-import warnings
-
 import pytest
 
 from fragile.distributed.distributed_export import BestWalker, DistributedExport
@@ -46,7 +43,6 @@ def kill_swarm(swarm):
     ray.shutdown()
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 8), reason="Requires python3.7 or lower")
 class TestExportInterface:
     @pytest.fixture(params=swarm_names, scope="class")
     def swarm_with_score(self, request):
@@ -67,7 +63,6 @@ class TestExportInterface:
         assert swarm.epoch == 0
 
     def test_score_gets_higher(self, swarm_with_score):
-        warnings.warn("test_score_gets_higher")
         swarm, target_score = swarm_with_score
         swarm.reset()
         swarm.run(report_interval=50)

@@ -47,7 +47,7 @@ You can pull a docker image from Docker Hub running:
 Where version-tag corresponds to the fragile version that will be installed in the pulled image.
 
 ## Installation
-This framework has been tested in Ubuntu 18.04 and supports Python 3.6, 3.7 and 3.8. 
+This framework has been tested in Ubuntu 18.04 and supports Python 3.7 and 3.8. 
 If you find any problems running it in a different OS or Python version please open an issue.
 
 It can be installed with `pip install fragile["all"]`.

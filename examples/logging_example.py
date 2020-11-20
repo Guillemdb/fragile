@@ -1,7 +1,7 @@
 import sys
+from judo.slogging import setup as setup_logging
 
 from fragile.core import NormalContinuous
-from fragile.core.slogging import setup as setup_logging
 from fragile.optimize import FunctionMapper
 from fragile.optimize.benchmarks import EggHolder
 

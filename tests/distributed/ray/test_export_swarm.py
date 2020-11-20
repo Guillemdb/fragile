@@ -1,8 +1,8 @@
 import sys
 
+from judo import dtype, tensor
 import pytest
 
-from fragile.backend import dtype, tensor
 from fragile.distributed.ray.export_swarm import ExportedWalkers, ExportSwarm
 from tests.distributed.ray import init_ray, ray
 
@@ -49,7 +49,7 @@ def export_swarm(request):
     kill_swarm(swarm)
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 8), reason="Requires python3.7 or lower")
+# @pytest.mark.skipif(sys.version_info >= (3, 8), reason="Requires python3.7 or lower")
 class TestExportInterface:
     def test_reset(self, export_swarm):
         reset = ray.get(export_swarm.reset.remote())

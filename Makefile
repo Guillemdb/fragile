@@ -4,11 +4,12 @@ PROJECT = fragile
 VERSION ?= latest
 
 .POSIX:
+.POSIX:
 check:
-	!(grep -R /tmp ./tests)
-	flake8 --count fragile
-	pylint fragile
-	black --check fragile
+	!(grep -R /tmp tests)
+	flakehell lint ${PROJECT}
+	pylint ${PROJECT}
+	black --check ${PROJECT}
 
 .PHONY: test
 test:

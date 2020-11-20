@@ -1,10 +1,12 @@
 import math
 from typing import Callable
 
+import judo
+from judo import random_state, tensor
 from numba import jit
 import numpy as np
 
-from fragile.backend import tensor
+from fragile.core.states import StatesEnv
 from fragile.optimize.env import Bounds, Function
 
 """
@@ -14,30 +16,30 @@ https://en.wikipedia.org/wiki/Test_functions_for_optimization
 
 
 def sphere(x: np.ndarray) -> np.ndarray:
-    return tensor.sum(x ** 2, 1).flatten()
+    return judo.sum(x ** 2, 1).flatten()
 
 
 def rastrigin(x: np.ndarray) -> np.ndarray:
     dims = x.shape[1]
     A = 10
-    result = A * dims + tensor.sum(x ** 2 - A * tensor.cos(2 * math.pi * x), 1)
+    result = A * dims + judo.sum(x ** 2 - A * judo.cos(2 * math.pi * x), 1)
     return result.flatten()
 
 
 def eggholder(x: np.ndarray) -> np.ndarray:
     x, y = x[:, 0], x[:, 1]
-    first_root = tensor.sqrt(tensor.abs(x / 2.0 + (y + 47)))
-    second_root = tensor.sqrt(tensor.abs(x - (y + 47)))
-    result = -1 * (y + 47) * tensor.sin(first_root) - x * tensor.sin(second_root)
+    first_root = judo.sqrt(judo.abs(x / 2.0 + (y + 47)))
+    second_root = judo.sqrt(judo.abs(x - (y + 47)))
+    result = -1 * (y + 47) * judo.sin(first_root) - x * judo.sin(second_root)
     return result
 
 
 def styblinski_tang(x) -> np.ndarray:
-    return tensor.sum(x ** 4 - 16 * x ** 2 + 5 * x, 1) / 2.0
+    return judo.sum(x ** 4 - 16 * x ** 2 + 5 * x, 1) / 2.0
 
 
 def rosenbrock(x) -> np.ndarray:
-    return 100 * tensor.sum((x[:, :-2] ** 2 - x[:, 1:-1]) ** 2, 1) + tensor.sum(
+    return 100 * judo.sum((x[:, :-2] ** 2 - x[:, 1:-1]) ** 2, 1) + judo.sum(
         (x[:, :-2] - 1) ** 2, 1
     )
 
@@ -60,14 +62,14 @@ def _lennard_fast(state):
 
 def lennard_jones(x: np.ndarray) -> np.ndarray:
     result = np.zeros(x.shape[0])
-    x = tensor.to_numpy(x)
+    x = judo.to_numpy(x)
     assert isinstance(x, np.ndarray)
     for i in range(x.shape[0]):
         try:
             result[i] = _lennard_fast(x[i])
         except ZeroDivisionError:
             result[i] = np.inf
-    result = tensor.as_tensor(result)
+    result = judo.as_tensor(result)
     return result
 
 
@@ -98,7 +100,7 @@ class Sphere(OptimBenchmark):
 
     @property
     def best_state(self):
-        return tensor.zeros(self.shape)
+        return judo.zeros(self.shape)
 
 
 class Rastrigin(OptimBenchmark):
@@ -114,7 +116,7 @@ class Rastrigin(OptimBenchmark):
 
     @property
     def best_state(self):
-        return tensor.zeros(self.shape)
+        return judo.zeros(self.shape)
 
 
 class EggHolder(OptimBenchmark):
@@ -144,7 +146,7 @@ class StyblinskiTang(OptimBenchmark):
 
     @property
     def best_state(self):
-        return tensor.ones(self.shape) * -2.903534
+        return judo.ones(self.shape) * -2.903534
 
     @property
     def benchmark(self):
@@ -162,7 +164,7 @@ class Rosenbrock(OptimBenchmark):
 
     @property
     def best_state(self):
-        return tensor.ones(self.shape)
+        return judo.ones(self.shape)
 
     @property
     def benchmark(self):
@@ -199,11 +201,17 @@ class LennardJones(OptimBenchmark):
 
     def __init__(self, n_atoms: int = 10, dims=None, *args, **kwargs):
         self.n_atoms = n_atoms
-        dims = 3 * n_atoms
+        self.dims = 3 * n_atoms
         self.benchmark = [np.zeros(self.n_atoms * 3), self.minima.get(str(int(n_atoms)), 0)]
-        super(LennardJones, self).__init__(dims=dims, function=lennard_jones, *args, **kwargs)
+        super(LennardJones, self).__init__(dims=self.dims, function=lennard_jones, *args, **kwargs)
 
     @staticmethod
     def get_bounds(dims):
-        bounds = [(-1.5, 1.5) for _ in range(dims)]
+        bounds = [(-15, 15) for _ in range(dims)]
         return Bounds.from_tuples(bounds)
+
+    def reset(self, batch_size: int = 1, **kwargs) -> StatesEnv:
+        states = super(LennardJones, self).reset(batch_size=batch_size, **kwargs)
+        new_states = random_state.normal(0, scale=1.0, size=states.states.shape)
+        states.update(observs=new_states, states=judo.copy(new_states))
+        return states

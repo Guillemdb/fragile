@@ -1,13 +1,18 @@
-import atexit
-import multiprocessing
-import sys
+import atexit  # noqa: I202
+
+try:
+    from torch import multiprocessing
+except ImportError:
+    import multiprocessing
+import sys  # noqa: I202
 import traceback
 from typing import Callable, Dict, List, Tuple, Union
 
-from fragile.backend import tensor, typing  # noqa: F401
+import judo
+
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
-from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks
+from fragile.core.typing import Tensor
 from fragile.core.wrappers import BaseWrapper, EnvWrapper
 from fragile.distributed.ray import ray
 
@@ -274,11 +279,11 @@ class _BatchEnv:
         return merged
 
     @staticmethod
-    def _merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
+    def _merge_data(data_dicts: List[Dict[str, Tensor]]):
         kwargs = {}
         for k in data_dicts[0].keys():
             try:
-                grouped = tensor.concatenate([tensor.to_backend(ddict[k]) for ddict in data_dicts])
+                grouped = judo.concatenate([judo.to_backend(ddict[k]) for ddict in data_dicts])
             except Exception:
                 val = str([ddict[k].shape for ddict in data_dicts])
                 raise ValueError(val)
@@ -288,9 +293,9 @@ class _BatchEnv:
     def _split_inputs_in_chunks(self, *args, **kwargs):
         self.kwargs_mode = len(args) == 0
         if self.kwargs_mode:
-            return split_kwargs_in_chunks(kwargs, self._n_chunks)
+            return judo.split_kwargs_in_chunks(kwargs, self._n_chunks)
         else:
-            return split_args_in_chunks(args, self._n_chunks)
+            return judo.split_args_in_chunks(args, self._n_chunks)
 
     def _make_transitions(self, split_results):
         results = [
@@ -312,8 +317,8 @@ class _BatchEnv:
         if isinstance(split_results[0], dict):
             merged = self._merge_data(split_results)
         else:  # Assumes batch of tensors
-            split_results = [tensor.to_backend(res) for res in split_results]
-            merged = tensor.concatenate(split_results)
+            split_results = [judo.to_backend(res) for res in split_results]
+            merged = judo.concatenate(split_results)
         return merged
 
 
@@ -333,7 +338,7 @@ class _ParallelEnvironment:
         for env in self._batch_env._envs:
             env.close()
 
-    def make_transitions(self, *args, **kwargs) -> Dict[str, typing.Tensor]:
+    def make_transitions(self, *args, **kwargs) -> Dict[str, Tensor]:
         """Use the underlying parallel environment to calculate the state transitions."""
         return self._batch_env.make_transitions(*args, **kwargs)
 
@@ -448,7 +453,7 @@ class ParallelEnv(EnvWrapper):
 
     def states_to_data(
         self, model_states: StatesModel, env_states: StatesEnv
-    ) -> Union[Dict[str, typing.Tensor], Tuple[typing.Tensor, ...]]:
+    ) -> Union[Dict[str, Tensor], Tuple[Tensor, ...]]:
         """Use the wrapped environment to get the data with no parallelization."""
         return self._local_env.states_to_data(model_states=model_states, env_states=env_states)
 
@@ -578,10 +583,10 @@ class RayEnv(EnvWrapper):
         return merged
 
     @staticmethod
-    def _merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
+    def _merge_data(data_dicts: List[Dict[str, Tensor]]):
         kwargs = {}
         for k in data_dicts[0].keys():
-            grouped = tensor.concatenate([ddict[k] for ddict in data_dicts])
+            grouped = judo.concatenate([ddict[k] for ddict in data_dicts])
             kwargs[k] = grouped
         return kwargs
 
@@ -589,9 +594,9 @@ class RayEnv(EnvWrapper):
         self.kwargs_mode = len(args) == 0
         if self.kwargs_mode:
 
-            return split_kwargs_in_chunks(kwargs, len(self.envs))
+            return judo.split_kwargs_in_chunks(kwargs, len(self.envs))
         else:
-            return split_args_in_chunks(args, len(self.envs))
+            return judo.split_args_in_chunks(args, len(self.envs))
 
     def _make_transitions(self, chunk_data):
         from fragile.distributed.ray import ray
@@ -617,8 +622,8 @@ class RayEnv(EnvWrapper):
         if isinstance(split_results[0], dict):
             merged = self._merge_data(split_results)
         else:  # Assumes batch of tensors
-            split_results = [tensor.to_backend(res) for res in split_results]
-            merged = tensor.concatenate(split_results)
+            split_results = [judo.to_backend(res) for res in split_results]
+            merged = judo.concatenate(split_results)
         return merged
 
     def reset(

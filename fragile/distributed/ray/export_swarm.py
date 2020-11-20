@@ -5,10 +5,10 @@ from fragile.distributed.export_swarm import (
     ExportSwarm as WorkerExportSwarm,
     ParamServer,
 )
-from fragile.distributed.ray import ray
+from fragile.distributed.ray import N_GPUS_ACTOR, ray
 
 
-@ray.remote
+@ray.remote(num_gpus=N_GPUS_ACTOR)
 class ExportParamServer(ParamServer):
     """:class:`ParamServer` that can be used with ray."""
 
@@ -20,7 +20,7 @@ class ExportParamServer(ParamServer):
             return default
 
 
-@ray.remote
+@ray.remote(num_gpus=N_GPUS_ACTOR)
 class ExportSwarm:
     """Allows to use a :class:`ExportSwarm` with ray."""
 

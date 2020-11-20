@@ -1,22 +1,30 @@
 import traceback
-from typing import Callable
+from typing import Callable, Union
 
+import judo
 import ray
 
-from fragile.backend import tensor
 from fragile.core.base_classes import BaseEnvironment, BaseModel, BaseTree
 from fragile.core.states import OneWalker, StatesEnv, StatesModel, StatesWalkers
 from fragile.core.swarm import Swarm as CoreSwarm, Walkers as CoreWalkers
+from fragile.distributed.ray import N_GPUS_ACTOR
 from fragile.distributed.ray.env import RayEnv
 
 
-@ray.remote
+@ray.remote(num_gpus=N_GPUS_ACTOR)
 class RemoteSwarm(CoreSwarm):
     """
     Swarm that runs inside a ``ray`` worker process.
 
     It uses a remote :class:`Environment` to step the walkers in parallel.
     """
+
+    @property
+    def n_workers(self) -> Union[int, None]:
+        try:
+            return self._n_workers
+        except AttributeError:
+            return None
 
     def init_swarm(
         self,
@@ -130,7 +138,7 @@ class RemoteSwarm(CoreSwarm):
         if self.tree is not None:
             id_walkers = self.walkers.get("id_walkers")
             root_id = (
-                id_walkers[0] if root_walker is None else tensor.copy(root_walker.id_walkers[0])
+                id_walkers[0] if root_walker is None else judo.copy(root_walker.id_walkers[0])
             )
             self.tree.reset(
                 root_id=root_id,
@@ -182,7 +190,7 @@ class RemoteSwarm(CoreSwarm):
         model_states = self.walkers.get("model_states")
         env_states = self.walkers.get("env_states")
         walkers_states = self.walkers.get("states")
-        parent_ids = tensor.copy(self.walkers.get("id_walkers")) if self.tree is not None else None
+        parent_ids = judo.copy(self.walkers.get("id_walkers")) if self.tree is not None else None
 
         model_states = self.model.predict(
             env_states=env_states, model_states=model_states, walkers_states=walkers_states

@@ -1,9 +1,10 @@
 """Core base classes for developing FAI algorithms."""
+from judo import Bounds
+
 from fragile.core.base_classes import BaseCritic, BaseWrapper
-from fragile.core.bounds import Bounds
 from fragile.core.dt_samplers import ConstantDt, GaussianDt, UniformDt
 from fragile.core.env import DiscreteEnv, Environment
-from fragile.core.memory import ReplayMemory
+from fragile.core.memory import SwarmMemory
 from fragile.core.models import (
     BinarySwap,
     ContinuousUniform,

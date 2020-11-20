@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Union
 
+import judo
 
-from fragile.backend import typing
 from fragile.core import (
     BaseCritic,
     BaseWrapper,
@@ -15,14 +15,15 @@ from fragile.core import (
     Swarm,
     Walkers,
 )
-from fragile.core.base_classes import BaseTree
+from fragile.core.tree import HistoryTree
+from fragile.core.typing import StateDict
 
 
 class CriticWrapper(BaseWrapper, BaseCritic):
     def __init__(self, critic: BaseCritic, name: str = "_critic"):
         BaseWrapper.__init__(self, critic, name=name)
 
-    def get_params_dict(self) -> typing.StateDict:
+    def get_params_dict(self) -> StateDict:
         return self.unwrapped.__class__.get_params_dict(self.unwrapped)
 
     def calculate(
@@ -87,7 +88,7 @@ class ModelWrapper(BaseWrapper, Model):
     def __init__(self, model: Model, name: str = "_model"):
         BaseWrapper.__init__(self, model, name=name)
 
-    def get_params_dict(self) -> typing.StateDict:
+    def get_params_dict(self) -> StateDict:
         return self.unwrapped.__class__.get_params_dict(self.unwrapped)
 
     def sample(
@@ -137,13 +138,13 @@ class ModelWrapper(BaseWrapper, Model):
 
     def add_critic_params(
         self, params: dict, override_params: bool = True, *args, **kwargs
-    ) -> typing.StateDict:
+    ) -> StateDict:
         return self.unwrapped.__class__.add_critic_params(
             self.unwrapped, params=params, override_params=override_params, *args, **kwargs
         )
 
     def update_states_with_critic(
-        self, actions: typing.Tensor, batch_size: int, model_states: StatesModel, **kwargs
+        self, actions: judo.typing.Tensor, batch_size: int, model_states: StatesModel, **kwargs
     ) -> StatesModel:
         return self.unwrapped.__class__.update_states_with_critic(
             self.unwrapped,
@@ -158,7 +159,7 @@ class EnvWrapper(BaseWrapper, Environment):
     def __init__(self, env: Environment, name: str = "_env"):
         BaseWrapper.__init__(self, env, name=name)
 
-    def get_params_dict(self) -> typing.StateDict:
+    def get_params_dict(self) -> StateDict:
         return self.unwrapped.__class__.get_params_dict(self.unwrapped)
 
     def states_from_data(
@@ -185,12 +186,12 @@ class EnvWrapper(BaseWrapper, Environment):
             self.unwrapped, model_states=model_states, env_states=env_states
         )
 
-    def make_transitions(self, *args, **kwargs) -> Dict[str, typing.Tensor]:
+    def make_transitions(self, *args, **kwargs) -> Dict[str, judo.typing.Tensor]:
         return self.unwrapped.__class__.make_transitions(self.unwrapped, *args, **kwargs)
 
     def states_to_data(
         self, model_states: StatesModel, env_states: StatesEnv
-    ) -> Union[Dict[str, typing.Tensor], Tuple[typing.Tensor, ...]]:
+    ) -> Union[Dict[str, judo.typing.Tensor], Tuple[judo.typing.Tensor, ...]]:
         return self.unwrapped.__class__.states_to_data(
             self.unwrapped, model_states=model_states, env_states=env_states
         )
@@ -221,7 +222,7 @@ class WalkersWrapper(BaseWrapper, Walkers):
     def calculate_virtual_reward(self):
         return self.unwrapped.__class__.calculate_virtual_reward(self.unwrapped)
 
-    def get_in_bounds_compas(self) -> typing.Tensor:
+    def get_in_bounds_compas(self) -> judo.typing.Tensor:
         return self.unwrapped.__class__.get_in_bounds_compas(self.unwrapped)
 
     def update_clone_probs(self) -> None:
@@ -257,7 +258,7 @@ class WalkersWrapper(BaseWrapper, Walkers):
             self.unwrapped, env_states=env_states, model_states=model_states, **kwargs
         )
 
-    def _accumulate_and_update_rewards(self, rewards: typing.Tensor):
+    def _accumulate_and_update_rewards(self, rewards: judo.typing.Tensor):
         return self.unwrapped.__class__._accumulate_and_update_rewards(
             self.unwrapped, rewards=rewards
         )
@@ -335,7 +336,7 @@ class SwarmWrapper(BaseWrapper, Swarm):
         n_walkers: int,
         reward_scale: float = 1.0,
         distance_scale: float = 1.0,
-        tree: Callable[[], BaseTree] = None,
+        tree: Callable[[], HistoryTree] = None,
         prune_tree: bool = True,
         *args,
         **kwargs
@@ -387,8 +388,8 @@ class SwarmWrapper(BaseWrapper, Swarm):
         )
 
 
-class TreeWrapper(BaseWrapper, BaseTree):
-    def __init__(self, tree: BaseTree, name: str = "_tree"):
+class TreeWrapper(BaseWrapper, HistoryTree):
+    def __init__(self, tree: HistoryTree, name: str = "_tree"):
         BaseWrapper.__init__(self, tree, name=name)
 
     def add_states(
