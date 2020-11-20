@@ -36,12 +36,6 @@ matrix:
         - pip install -r requirements-lint.txt
     - stage: test
       if: commit_message !~ /^Bump version/
-      name: "Test python 3.6"
-      python: 3.6
-      script: *_coverage
-      install: *_install
-    - stage: test
-      if: commit_message !~ /^Bump version/
       name: "Test python 3.7"
       python: 3.7
       script: *_coverage

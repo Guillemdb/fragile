@@ -1,9 +1,9 @@
 Cython>=0.29.16,<1.0; python_version == '3.7'
-networkx==2.4
-numba==0.48.0
-numpy==1.18.2
-plangym==0.0.7
+networkx==2.5
+numba==0.51.2
+numpy==1.19.4
+plangym==0.0.8
 PyYAML
-scipy==1.4.1
-xxhash==1.4.3
+scipy==1.5.4
+xxhash==2.0.0
 
